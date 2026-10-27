@@ -198,6 +198,84 @@
 </head>
 <body class="antialiased text-[#111] bg-[#FAFAFA]">
 
+<!-- Orbital preloader -->
+<div id="uv-preloader" style="position:fixed;inset:0;z-index:999999;background:#0D0D0D;display:flex;align-items:center;justify-content:center;">
+  <canvas id="uv-orbit" width="900" height="500" style="max-width:90vw;"></canvas>
+</div>
+<script>
+(function () {
+  const overlay = document.getElementById('uv-preloader');
+  const cv = document.getElementById('uv-orbit');
+  const ctx = cv.getContext('2d');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { overlay.remove(); return; }
+  document.documentElement.style.overflow = 'hidden';
+
+  const WORD = 'UV';
+  const cx = 450, cy = 250, R = 130;
+  let t = 0, glow = 0, drawn = 0, leaving = false, start = performance.now();
+
+  const wob = i => 14 * Math.sin(i * 0.55) + 8 * Math.sin(i * 0.23 + 2);
+  const pt = i => {
+    const a = i / 120 * Math.PI * 2;
+    const r = R + wob(i);
+    return [cx + Math.cos(a) * r * 1.55, cy + Math.sin(a) * r * 0.85];
+  };
+
+  function frame(now) {
+    const el = (now - start) / 1000;
+    t += 1;
+    ctx.clearRect(0, 0, 900, 500);
+
+    glow = Math.min(1, glow + 0.02);
+    ctx.save();
+    ctx.font = '900 92px "Plus Jakarta Sans", Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(255,255,255,0.9)';
+    ctx.shadowBlur = 26 * glow;
+    ctx.fillStyle = 'rgba(246,244,239,' + (0.35 + 0.65 * glow) + ')';
+    ctx.fillText(WORD, cx, cy);
+    ctx.restore();
+
+    if (el > 0.35) {
+      drawn = Math.min(240, drawn + 3.4);
+      ctx.beginPath();
+      for (let i = 0; i <= drawn; i++) {
+        const p = pt(i);
+        i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]);
+      }
+      ctx.strokeStyle = 'rgba(246,244,239,0.85)';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = 'rgba(255,255,255,0.6)';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      const d = pt(drawn);
+      ctx.beginPath();
+      ctx.arc(d[0], d[1], 7, 0, 7);
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = 'rgba(255,255,255,1)';
+      ctx.shadowBlur = 18;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    const HOLD = new URLSearchParams(location.search).get('hold') ? 8 : 2.4;
+    if (drawn >= 240 && el > HOLD) leaving = true;
+    if (leaving) {
+      overlay.style.transition = 'opacity .7s ease, transform .9s cubic-bezier(.8,0,.2,1)';
+      overlay.style.opacity = '0';
+      overlay.style.transform = 'scale(1.06)';
+      document.documentElement.style.overflow = '';
+      setTimeout(() => overlay.remove(), 950);
+      return;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  setTimeout(() => { if (overlay.isConnected) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 700); document.documentElement.style.overflow = ''; } }, new URLSearchParams(location.search).get('hold') ? 9000 : 5000);
+})();
+</script>
+
   <!-- Notification Toast Container -->
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
